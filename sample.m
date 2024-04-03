@@ -25,12 +25,11 @@ y = lsim(G1,u,t);     % G1での演算
 net = deepHW(1);
 net.add_FIR(50, 1);
 
-net.train(u, y, epochs=10000, lambda_kernel=0.1, lambda_theta_alpha=100);
+net.train(u, y, epochs=10000, lambda_kernel=1, lambda_theta_alpha=100,...
+    initial_learning_rate=0.1);
 
 [theta, theta_alpha] = net.get_fir_parameters();
+[Sys, Sys_alpha] = net.get_fir(Ts=Ts);
 
 figure, 
-impulse(G1)
-hold on
-plot((0:size(theta{1}, 1)-1)*Ts, theta{1}/Ts)
-plot((0:size(theta_alpha{1}, 1)-1)*Ts, theta_alpha{1}/Ts)
+impulse(G1, Sys{1}, Sys_alpha{1})

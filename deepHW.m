@@ -221,6 +221,16 @@ classdef deepHW < handle
             
         end
 
+        function [Sys, Sys_alpha] = get_fir(obj, options)
+            arguments
+                obj
+                options.Ts = []
+            end
+            [Fir_params, Alpha_params] = obj.get_fir_parameters();
+            Sys = tools.cellfun(@(f) params2fir(f, Ts=options.Ts), Fir_params);
+            Sys_alpha = tools.cellfun(@(a) params2fir(a, Ts=options.Ts), Alpha_params);
+        end
+
 
     end
 
@@ -266,3 +276,17 @@ classdef deepHW < handle
 
 end
 
+function sys = params2fir(params, options)
+    arguments
+        params
+        options.has_feedthrough (1,1) logical = true
+        options.Ts = []
+    end
+    params = params(:)';
+    l = length(params);
+    if ~options.has_feedthrough
+        l = l + 1;
+    end
+    den = [1, zeros(1, l-1)];
+    sys = tf(params, den, options.Ts);
+end
