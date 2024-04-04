@@ -122,7 +122,7 @@ classdef deepHW < handle
                 options.connection_name = obj.output_name
             end
 
-            layer = fullyConnectedLayer(n_out,"Name", strcat("Gain", name), "BiasLearnRateFactor", 0);
+            layer = fullyConnectedLayer(n_out,"Name", strcat("Gain", options.name), "BiasLearnRateFactor", 0);
             obj.add_layer(layer, output_name = layer.Name, connection_name = options.connection_name);
         end
 
@@ -174,7 +174,7 @@ classdef deepHW < handle
             averageSqGrad = [];
 
             monitor = trainingProgressMonitor(Metrics=["Loss_Kernel","Loss_log10","Loss_RMSE","Kernelterm","theta_alpha","mg_term"], Info=["Epoch","LearnRate","Loss_Kernel","Loss_log10","Loss_RMSE","Kernelterm","theta_alpha","mg_term"], XLabel="Iteration");
-            learnRate = ILR;
+            % learnRate = ILR;
             while epoch < n && ~monitor.Stop
 
                 epoch = epoch + 1;
@@ -209,12 +209,18 @@ classdef deepHW < handle
             Alpha_params = cell(numel(alpha_index), 1);
             for i = 1:numel(fir_index)
                 fir_layer = obj.net_trained.Layers(fir_index(i));
-                l = fir_layer.FilterSize;
-                fir_params = flipud(reshape(fir_layer.Weights, l, []));
+                % l = fir_layer.FilterSize;
+                fir_params = flipud(fir_layer.Weights);
                 alpha_layer = obj.net_trained.Layers(alpha_index(i));
-                alpha_params = reshape(alpha_layer.Weights, l, []);
+                alpha_params = alpha_layer.Weights;
                 K = obj.kernels{i};
-                alpha_params = K*alpha_params;
+                if numel(size(alpha_params)) == 2
+                    alpha_params = K*alpha_params;
+                else
+                    for j = 1:size(alpha_params, 3)
+                        alpha_params(:, :, j) = K*alpha_params(:, :, j);
+                    end
+                end
                 Fir_params{i} = fir_params;
                 Alpha_params{i} = alpha_params;
             end
@@ -277,6 +283,23 @@ classdef deepHW < handle
 end
 
 function sys = params2fir(params, options)
+    arguments
+        params
+        options.has_feedthrough (1,1) logical = true
+        options.Ts = []
+    end
+
+    options = tools.struct2parameter(options);
+
+    if numel(size(params))==2
+        sys = tools.harrayfun(@(i) params2fir_(params(:, i), options{:}), 1:size(params, 2));
+    else
+        sys = tools.varrayfun(@(j) tools.harrayfun(@(i) params2fir_(params(i, j), options{:}),...
+            1:size(params, 2)), 1:size(params, 3));
+    end
+end
+
+function sys = params2fir_(params, options)
     arguments
         params
         options.has_feedthrough (1,1) logical = true
