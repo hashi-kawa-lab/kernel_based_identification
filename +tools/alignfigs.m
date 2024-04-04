@@ -10,7 +10,11 @@ function alignfigs(rows, columns, margins, paddings)
     
     % すべてのfigureのハンドルを取得
     allFigures = findall(0, 'Type', 'figure');
-    [~, i] = sort([allFigures.Number]);
+    numbers = {allFigures.Number};
+    idx = tools.vcellfun(@(c) ~isempty(c), numbers);
+    allFigures = allFigures(idx);
+    numbers = vertcat(numbers{idx});
+    [~, i] = sort(numbers);
     allFigures = allFigures(i);
     % figureの数
     numFigures = numel(allFigures);
